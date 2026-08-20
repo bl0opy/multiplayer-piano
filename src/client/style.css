@@ -88,3 +88,110 @@ footer {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* --- join gate --------------------------------------------------------- */
+
+#join {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+#join[hidden] {
+  display: none;
+}
+
+.join-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(320px, 88vw);
+  padding: 1.75rem;
+  border: 1px solid #27272a;
+  border-radius: 14px;
+  background: #14161b;
+}
+
+.join-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+#name-input {
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #2f2f35;
+  border-radius: 9px;
+  background: #0f1115;
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+#name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.join-card button {
+  padding: 0.7rem 0.85rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #1a1206;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.join-card button:hover {
+  filter: brightness(1.08);
+}
+
+.join-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* --- remote cursors ---------------------------------------------------- */
+
+#cursor-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  /* Cursor updates arrive ~25x/sec; a short transition smooths the gaps
+     between packets without making the cursor feel laggy. */
+  transition: transform 90ms linear;
+  will-change: transform;
+}
+
+.cursor-label {
+  margin-top: 12px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #101014;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -7,6 +7,22 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <form id="join" autocomplete="off">
+      <div class="join-card">
+        <h2>what should we call you?</h2>
+        <input
+          id="name-input"
+          name="name"
+          type="text"
+          maxlength="24"
+          placeholder="your name"
+          aria-label="your name"
+        />
+        <button type="submit">join room</button>
+        <p class="join-hint">everyone here sees your cursor and your notes</p>
+      </div>
+    </form>
+
     <header>
       <h1>multiplayer piano</h1>
       <p id="status">connecting…</p>
@@ -23,6 +39,8 @@
         Everyone with this room's link hears and sees it live.
       </p>
     </footer>
+
+    <div id="cursor-layer" aria-hidden="true"></div>
 
     <script type="module" src="./main.ts"></script>
   </body>

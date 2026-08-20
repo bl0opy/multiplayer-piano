@@ -11,17 +11,32 @@ const audioCtx = new AudioContext();
 // can release exactly the right voice even with overlapping notes.
 const activeVoices = new Map<string, { osc: OscillatorNode; gain: GainNode }>();
 
+// Tracks who is holding each key, so a key stays lit in the right color
+// when two players press it and only one lets go.
+const keyHolders = new Map<number, { id: string; color: string }[]>();
+
 function midiToFrequency(note: number): number {
   return 440 * Math.pow(2, (note - 69) / 12);
 }
 
 /** voiceKey lets the same note be played by different players simultaneously. */
-function voiceKey(note: number, color: string) {
-  return `${note}:${color}`;
+function voiceKey(note: number, playerId: string) {
+  return `${note}:${playerId}`;
 }
 
-export function playNote(note: number, color: string, velocity = 0.8) {
-  if (audioCtx.state === "suspended") audioCtx.resume();
+/**
+ * Browsers start an AudioContext suspended until a user gesture. Call this
+ * from a real click (the join button) so the first note actually sounds.
+ */
+export function unlockAudio() {
+  if (audioCtx.state === "suspended") void audioCtx.resume();
+}
+
+export function playNote(note: number, playerId: string, color: string, velocity = 0.8) {
+  unlockAudio();
+  // Re-pressing an already-sounding note (key repeat, duplicate event)
+  // would orphan the previous oscillator, so release it first.
+  if (activeVoices.has(voiceKey(note, playerId))) stopNote(note, playerId);
 
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -35,12 +50,16 @@ export function playNote(note: number, color: string, velocity = 0.8) {
   osc.connect(gain).connect(audioCtx.destination);
   osc.start();
 
-  activeVoices.set(voiceKey(note, color), { osc, gain });
-  highlightKey(note, color, true);
+  activeVoices.set(voiceKey(note, playerId), { osc, gain });
+
+  const holders = keyHolders.get(note) ?? [];
+  holders.push({ id: playerId, color });
+  keyHolders.set(note, holders);
+  paintKey(note);
 }
 
-export function stopNote(note: number, color: string) {
-  const key = voiceKey(note, color);
+export function stopNote(note: number, playerId: string) {
+  const key = voiceKey(note, playerId);
   const voice = activeVoices.get(key);
   if (voice) {
     const now = audioCtx.currentTime;
@@ -50,7 +69,20 @@ export function stopNote(note: number, color: string) {
     voice.osc.stop(now + 0.3);
     activeVoices.delete(key);
   }
-  highlightKey(note, color, false);
+
+  const holders = (keyHolders.get(note) ?? []).filter((h) => h.id !== playerId);
+  if (holders.length) keyHolders.set(note, holders);
+  else keyHolders.delete(note);
+  paintKey(note);
+}
+
+/** Releases every voice belonging to one player (used when they disconnect). */
+export function stopAllForPlayer(playerId: string) {
+  for (const note of [...keyHolders.keys()]) {
+    if ((keyHolders.get(note) ?? []).some((h) => h.id === playerId)) {
+      stopNote(note, playerId);
+    }
+  }
 }
 
 // --- DOM / keyboard rendering -------------------------------------------
@@ -120,13 +152,14 @@ function bindPointerEvents(
   el.addEventListener("touchend", up);
 }
 
-/** Highlights every key element matching `note` in the given player color. */
-function highlightKey(note: number, color: string, on: boolean) {
+/** Repaints a key from its current holders — most recent presser wins the color. */
+function paintKey(note: number) {
+  const holders = keyHolders.get(note);
   const els = document.querySelectorAll<HTMLElement>(`[data-note="${note}"]`);
   els.forEach((el) => {
-    if (on) {
+    if (holders?.length) {
       el.classList.add("active");
-      el.style.backgroundColor = color;
+      el.style.backgroundColor = holders[holders.length - 1].color;
     } else {
       el.classList.remove("active");
       el.style.backgroundColor = "";
