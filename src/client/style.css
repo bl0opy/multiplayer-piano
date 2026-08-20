@@ -1,0 +1,90 @@
+:root {
+  --bg: #0f1115;
+  --fg: #f4f4f5;
+  --muted: #9ca3af;
+  --white-key: #f4f4f5;
+  --black-key: #18181b;
+  --accent: #f97316;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem 1rem;
+}
+
+header {
+  text-align: center;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+#status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+#room-label {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+#keyboard {
+  position: relative;
+  display: flex;
+  height: 220px;
+  width: min(900px, 92vw);
+  user-select: none;
+}
+
+.key {
+  position: relative;
+  border: 1px solid #27272a;
+  border-radius: 0 0 6px 6px;
+  cursor: pointer;
+  transition: background-color 80ms ease, transform 80ms ease;
+}
+
+.key.white {
+  flex: 1;
+  background: var(--white-key);
+  z-index: 1;
+}
+
+.key.black {
+  position: absolute;
+  width: 6%;
+  height: 60%;
+  background: var(--black-key);
+  z-index: 2;
+  border-radius: 0 0 4px 4px;
+}
+
+.key.active {
+  transform: translateY(4px);
+}
+
+footer {
+  max-width: 480px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}

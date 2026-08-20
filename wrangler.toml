@@ -1,0 +1,27 @@
+name = "multiplayer-piano"
+main = "src/worker/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Every "room" is one instance of this Durable Object.
+# Cloudflare routes all WebSocket connections for a given room
+# to the exact same instance, wherever it lives on the edge.
+[[durable_objects.bindings]]
+name = "PIANO_ROOMS"
+class_name = "PianoRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["PianoRoom"]
+
+# Serves the built client (dist/client) for any request that isn't
+# handled by the Worker's fetch() logic below — i.e. the actual site.
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+
+# Uncomment to persist session logs (see room.ts TODO for playback):
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "multiplayer-piano-db"
+# database_id = "REPLACE_ME"
