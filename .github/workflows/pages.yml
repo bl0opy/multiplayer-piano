@@ -1,0 +1,56 @@
+name: deploy client to github pages
+
+# GitHub Pages hosts the static client only. The Worker + Durable Object
+# (rooms, presence, cursors) must be deployed separately with
+# `npm run deploy`; set the repository variable WORKER_ORIGIN to its URL
+# (e.g. https://multiplayer-piano.<subdomain>.workers.dev) so the client
+# knows where to open its WebSocket.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: fail early if the worker origin is not configured
+        run: |
+          if [ -z "${{ vars.WORKER_ORIGIN }}" ]; then
+            echo "::error::Set the WORKER_ORIGIN repository variable to your deployed Worker URL."
+            echo "Without it the Pages build would ship a client that tries to open a WebSocket"
+            echo "against github.io, which cannot serve one, and every room would hang."
+            exit 1
+          fi
+      - run: npm run build:pages
+        env:
+          VITE_WORKER_ORIGIN: ${{ vars.WORKER_ORIGIN }}
+          PAGES_BASE: /${{ github.event.repository.name }}/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

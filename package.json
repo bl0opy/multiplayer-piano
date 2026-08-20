@@ -11,7 +11,8 @@
     "cf-typegen": "wrangler types",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:preview": "PREVIEW=1 playwright test"
+    "test:preview": "PREVIEW=1 playwright test",
+    "build:pages": "vite build -c vite.config.pages.ts"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",
