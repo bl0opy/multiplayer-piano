@@ -17,7 +17,11 @@ and you'll hear/see each other's notes land in real time.
   `workerd`, so local dev behaves like production instead of a Node.js
   approximation of it.
 - **Web Audio API** — client-side synth (`src/client/piano.ts`), one
-  oscillator+gain voice per sounding note.
+  oscillator+gain voice per sounding note, keyed by player so two people
+  holding the same key are two independent voices.
+- **Live cursors** — pointer positions travel as viewport fractions
+  (`src/client/cursors.ts`), throttled to ~25/sec and coalesced onto
+  animation frames, so they land sensibly across different screen sizes.
 
 ## Setup
 
@@ -26,13 +30,44 @@ npm install
 npm run dev
 ```
 
-Open the printed local URL, then open it again in a second tab (or on
-your phone on the same network) to jam with yourself. Deploying:
+Open the printed local URL, then open it again in a second browser profile
+(or on your phone on the same network) to jam with yourself. You'll be asked
+for a name on the way in; everyone in the room sees that name follow your
+cursor. Deploying:
 
 ```bash
 npx wrangler login   # first time only
 npm run deploy
 ```
+
+Tests drive two real browser contexts into one room:
+
+```bash
+npm test               # against the dev server
+npm run test:preview   # against the production build
+```
+
+## Hosting on GitHub Pages
+
+Pages is static hosting — it cannot run the Worker or the Durable Object, so
+it can't host the multiplayer half on its own. The split that does work:
+
+- **Worker + Durable Object** on Cloudflare (`npm run deploy`) — rooms,
+  presence, cursor and note fan-out.
+- **Static client** on GitHub Pages, opening its WebSocket cross-origin
+  against that Worker.
+
+`.github/workflows/pages.yml` does the Pages half on every push to `main`.
+Set a repository variable `WORKER_ORIGIN` to your deployed Worker URL
+(`https://multiplayer-piano.<subdomain>.workers.dev`) first — the workflow
+fails fast without it, because a Pages build with no Worker origin ships a
+client that tries to open a WebSocket against `github.io` and hangs forever.
+
+Locally the same build is `PAGES_BASE=/ VITE_WORKER_ORIGIN=<url> npm run build:pages`.
+
+Worth knowing: deploying the Worker alone already serves the client from the
+same origin, no Pages involved and no cross-origin hop. The Pages setup is
+only worth it if you specifically want the site on `github.io`.
 
 ## How a note travels
 

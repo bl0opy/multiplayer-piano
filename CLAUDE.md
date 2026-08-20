@@ -14,6 +14,8 @@ npm run cf-typegen  # regenerate Worker types after changing wrangler.toml bindi
 npm test                 # Playwright against the dev server
 npm run test:preview     # same suite against the production build (PREVIEW=1)
 npx playwright test -g "a note played"   # single test by title
+
+npm run build:pages      # client-only build for GitHub Pages (no Worker)
 ```
 
 No linter or formatter is configured. `npx tsc --noEmit` is the only type check.
@@ -33,9 +35,20 @@ Three layers, one message type flowing between them: `{ type: "note_on" | "note_
 - It uses the **WebSocket Hibernation API** (`ctx.acceptWebSocket`, `webSocketMessage`/`webSocketClose`/`webSocketError` handlers), not `ws.accept()` + an event loop. Per-connection state must go through `serializeAttachment`/`deserializeAttachment` — instance fields do NOT survive eviction. Adding a constructor-held `Map` of connections is the classic wrong move here; use `ctx.getWebSockets()` instead.
 - `broadcast()` excludes the sender, which is what makes the client's local echo non-duplicating. If you ever broadcast to all sockets, remove the client-side local echo too or notes double-trigger for the player.
 
-Player color is assigned by `existing.length % PLAYER_COLORS.length` at connect time and is the only player identity in the protocol — it keys voices, key highlights, and join/leave messages. There is no user ID.
+Each connection gets a server-assigned `id` (`crypto.randomUUID()`) plus a color picked to avoid collisions with players already in the room. **The `id` is the player identity** — it keys voices, cursors, and join/leave; color is presentation only. Names arrive later via `hello` and are sanitized server-side (control chars stripped, capped at 24 chars).
 
-**`src/client/`** — vanilla TS, no framework. `main.ts` owns the socket (exponential-backoff reconnect, 500ms → 8s) and the room ID (`?room=` param, generated + `replaceState`d if absent). `piano.ts` owns everything else: Web Audio synth, DOM keyboard, computer-keyboard mapping.
+A socket is invisible to other players until its first `hello`, so `peers()` filters on a non-empty name. That's what lets a client sit on the name gate without appearing in anyone's roster.
+
+Protocol, client → server: `hello{name}`, `note_on`/`note_off{note,velocity}`, `cursor{x,y}`. Server → client: `welcome{self,players}`, `player_joined`/`player_renamed{player,count}`, `player_left{id,count}`, `note_on`/`note_off{id,color,note}`, `cursor{id,x,y}`. Cursor messages deliberately carry no color or name — they're the highest-volume message, so clients look those up in their own roster.
+
+**`src/client/`** — vanilla TS, no framework.
+
+- `main.ts` — the name gate, the socket (exponential-backoff reconnect, 500ms → 8s), the room ID (`?room=` param, generated + `replaceState`d if absent), and the `peers` roster every other module reads from. **Nothing connects until the join form is submitted**: that submit is also the user gesture that unlocks the AudioContext, so don't move `connect()` earlier or the first note is silent.
+- `piano.ts` — Web Audio synth, DOM keyboard, computer-keyboard mapping.
+- `cursors.ts` — remote cursor rendering. Positions are viewport *fractions*, not pixels, so they map across screen sizes; sends are throttled to ~40ms and coalesced onto animation frames.
+- `config.ts` — resolves the WebSocket URL. Same-origin by default; `VITE_WORKER_ORIGIN` points it at a remote Worker for the GitHub Pages build.
+
+Player names are untrusted input on top of being sanitized server-side — set them with `textContent`, never `innerHTML` (see `createCursor`).
 
 Voices are keyed `` `${note}:${color}` `` so two players holding the same note are two independent oscillators and one `note_off` releases only the right one. Preserve that key shape if you touch voice handling.
 
@@ -51,6 +64,15 @@ never share a Durable Object with stale players in it.
 Assert on the player count rather than the string "connected" when more than one client
 is involved: `player_joined` overwrites the status line, so "connected" is only briefly
 on screen and asserting on it is racy.
+
+## Hosting
+
+Two deployment targets, and they are not equivalent:
+
+- `npm run deploy` — Worker serves both the API and the client from one origin. This is the simple path.
+- `npm run build:pages` + `.github/workflows/pages.yml` — static client on GitHub Pages, WebSocket cross-origin to the Cloudflare Worker. Pages cannot run a Worker or Durable Object, so the Worker still has to be deployed separately; the workflow hard-fails if the `WORKER_ORIGIN` repo variable is unset, since the alternative is a silently hanging client.
+
+`vite.config.pages.ts` deliberately omits the cloudflare plugin — it is a client-only build.
 
 ## Notes
 

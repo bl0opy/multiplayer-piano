@@ -23,11 +23,25 @@ function errorsOf(page: Page): string[] {
   return (page as any).__errors ?? [];
 }
 
-test("a single client reaches the room over a websocket", async ({ context }) => {
-  const page = await openPage(context, roomUrl("solo"));
+/** Clears the name gate — nothing connects until a name is submitted. */
+async function join(page: Page, name: string) {
+  await page.locator("#name-input").fill(name);
+  await page.locator("#join button").click();
+  await expect(page.locator("#join")).toBeHidden();
+}
 
-  await expect(page.locator("#status")).toContainText("connected", { timeout: 10_000 });
-  expect(errorsOf(page)).toEqual([]);
+test("no socket is opened until a name is submitted", async ({ context }) => {
+  const page = await openPage(context, roomUrl("gate"));
+
+  const sockets: string[] = [];
+  page.on("websocket", (ws) => sockets.push(ws.url()));
+
+  await expect(page.locator("#join")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(sockets.filter((u) => u.includes("/room/"))).toEqual([]);
+
+  await join(page, "ada");
+  await expect(page.locator("#status")).toContainText("you are ada");
 });
 
 test("the room id is generated into the url when absent", async ({ context }) => {
@@ -46,18 +60,18 @@ test("a note played by one client lights up on the other", async ({ browser }) =
 
   const pageA = await openPage(a, url);
   const pageB = await openPage(b, url);
+  await join(pageA, "ada");
+  await join(pageB, "grace");
 
-  // Wait on the player count, not on the word "connected": once B joins,
-  // A's status is overwritten by the player_joined message, so "connected"
-  // is only briefly on screen. Both pages reaching 2 is the real signal
-  // that the Durable Object has both sockets.
-  await expect(pageA.locator("#status")).toContainText("2 player(s)");
-  await expect(pageB.locator("#status")).toContainText("2 player(s)");
+  // Wait on the player count, not on the word "connected": both pages
+  // reaching 2 is the real signal that the Durable Object has both sockets.
+  await expect(pageA.locator("#status")).toContainText("2 players here");
+  await expect(pageB.locator("#status")).toContainText("2 players here");
 
   const middleC = pageA.locator('[data-note="60"]');
   await middleC.dispatchEvent("mousedown");
 
-  // B should see A's note land, in A's color, without B having touched anything.
+  // B should see A's note land without B having touched anything.
   const remoteKey = pageB.locator('[data-note="60"]');
   await expect(remoteKey).toHaveClass(/active/);
 
@@ -66,6 +80,71 @@ test("a note played by one client lights up on the other", async ({ browser }) =
 
   expect(errorsOf(pageA)).toEqual([]);
   expect(errorsOf(pageB)).toEqual([]);
+
+  await a.close();
+  await b.close();
+});
+
+test("each player sees the other's named cursor", async ({ browser }) => {
+  const a = await browser.newContext();
+  const b = await browser.newContext();
+  const url = roomUrl("cursors");
+
+  const pageA = await openPage(a, url);
+  const pageB = await openPage(b, url);
+  await join(pageA, "ada");
+  await join(pageB, "grace");
+
+  await expect(pageB.locator("#status")).toContainText("2 players here");
+
+  await pageA.mouse.move(120, 140);
+  await pageA.mouse.move(300, 220); // second move: throttling sends on a later frame
+
+  const remoteCursor = pageB.locator("#cursor-layer .cursor");
+  await expect(remoteCursor).toHaveCount(1);
+  await expect(remoteCursor.locator(".cursor-label")).toHaveText("ada");
+
+  // The cursor is positioned, not stuck at the origin.
+  await expect
+    .poll(async () => (await remoteCursor.getAttribute("style")) ?? "")
+    .toContain("translate3d");
+
+  // B's own cursor must not be drawn on B's screen.
+  await pageB.mouse.move(400, 300);
+  await expect(pageB.locator("#cursor-layer .cursor")).toHaveCount(1);
+
+  expect(errorsOf(pageA)).toEqual([]);
+  expect(errorsOf(pageB)).toEqual([]);
+
+  await a.close();
+  await b.close();
+});
+
+test("a disconnecting player's cursor and held note are cleaned up", async ({ browser }) => {
+  const a = await browser.newContext();
+  const b = await browser.newContext();
+  const url = roomUrl("leave");
+
+  const pageA = await openPage(a, url);
+  const pageB = await openPage(b, url);
+  await join(pageA, "ada");
+  await join(pageB, "grace");
+
+  await expect(pageB.locator("#status")).toContainText("2 players here");
+
+  await pageA.mouse.move(200, 200);
+  await expect(pageB.locator("#cursor-layer .cursor")).toHaveCount(1);
+
+  // A holds a note down and then vanishes without releasing it.
+  await pageA.locator('[data-note="62"]').dispatchEvent("mousedown");
+  await expect(pageB.locator('[data-note="62"]')).toHaveClass(/active/);
+
+  await pageA.close();
+
+  await expect(pageB.locator("#status")).toContainText("1 player here");
+  await expect(pageB.locator("#cursor-layer .cursor")).toHaveCount(0);
+  // The abandoned note must not sustain forever.
+  await expect(pageB.locator('[data-note="62"]')).not.toHaveClass(/active/);
 
   await a.close();
   await b.close();
