@@ -44,6 +44,45 @@ test("no socket is opened until a name is submitted", async ({ context }) => {
   await expect(page.locator("#status")).toContainText("you are ada");
 });
 
+test("typing your name does not play the piano", async ({ context }) => {
+  const page = await context.newPage();
+  // Count buffer sources actually started, not just key highlights — the
+  // audible symptom is what matters here.
+  await page.addInitScript(() => {
+    (window as any).__started = 0;
+    const Original = window.AudioContext;
+    (window as any).AudioContext = class extends Original {
+      createBufferSource() {
+        const source = super.createBufferSource();
+        const start = source.start.bind(source);
+        source.start = (...args: any[]) => {
+          (window as any).__started++;
+          return (start as any)(...args);
+        };
+        return source;
+      }
+    };
+  });
+  await page.goto(roomUrl("typing"));
+
+  // "a" is mapped to middle C. A keypress is a user gesture, so before this
+  // was gated it started the AudioContext and sounded a note mid-name.
+  await page.locator("#name-input").click();
+  await page.keyboard.down("a");
+  await page.waitForTimeout(250);
+
+  expect(await page.locator(".key.active").count()).toBe(0);
+  expect(await page.evaluate(() => (window as any).__started)).toBe(0);
+  await page.keyboard.up("a");
+
+  // ...and the keyboard still works once you're in.
+  await join(page, "ada");
+  await page.keyboard.down("a");
+  await expect(page.locator(".key.active")).toHaveCount(1);
+  await expect.poll(() => page.evaluate(() => (window as any).__started)).toBeGreaterThan(0);
+  await page.keyboard.up("a");
+});
+
 test("the piano sample is served and decodes", async ({ context }) => {
   const page = await context.newPage();
   const audio: { url: string; status: number }[] = [];

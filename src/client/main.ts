@@ -48,6 +48,7 @@ let myId = "";
 let myColor = "#ff5a1f";
 let socket: WebSocket | null = null;
 let reconnectDelay = 500;
+let joined = false;
 
 /** Everyone else in the room, by id. Cursors and notes look up color/name here. */
 const peers = new Map<string, Peer>();
@@ -110,6 +111,14 @@ joinEl.addEventListener("submit", (e) => {
   unlockAudio();
 
   joinEl.hidden = true;
+  joined = true;
+
+  // Bind the computer keyboard only now. Bound at load, its window-level
+  // keydown listener fires while the player is typing their name — and a
+  // keypress is a user gesture, so it starts the AudioContext and actually
+  // sounds notes. Typing "ada" played a chord.
+  bindComputerKeyboard(handleNoteOn, handleNoteOff);
+
   connect();
 });
 
@@ -222,16 +231,19 @@ copyLinkEl.addEventListener("click", async () => {
 // Local echo: play your own notes instantly, don't wait on a server round
 // trip. The server only rebroadcasts to *other* players, so no double-trigger.
 function handleNoteOn(note: number) {
+  // Belt and braces: the overlay covers the keys, but a stray pointer or
+  // synthetic event must not make noise before the player has joined.
+  if (!joined) return;
   playNote(note, myId || "self", myColor);
   send({ type: "note_on", note, velocity: 0.8 });
 }
 function handleNoteOff(note: number) {
+  if (!joined) return;
   stopNote(note, myId || "self");
   send({ type: "note_off", note });
 }
 
 renderKeyboard(keyboardEl, handleNoteOn, handleNoteOff);
-bindComputerKeyboard(handleNoteOn, handleNoteOff);
 initCursorLayer(cursorLayerEl);
 trackLocalCursor((x, y) => send({ type: "cursor", x, y }));
 
