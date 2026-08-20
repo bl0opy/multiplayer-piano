@@ -4,6 +4,38 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Multiplayer Piano — edge-native jam room</title>
+    <meta
+      name="description"
+      content="A real-time shared piano. Send someone the room link and play together from anywhere."
+    />
+
+    <!-- Link previews. og:image MUST be an absolute URL — scrapers don't
+         resolve relative paths — and the origin differs per deployment, so
+         VITE_SITE_URL is substituted at build time by the vite configs. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Multiplayer Piano" />
+    <meta property="og:title" content="Multiplayer Piano" />
+    <meta
+      property="og:description"
+      content="A real-time shared piano. Send someone the room link and play together from anywhere."
+    />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:image" content="%VITE_SITE_URL%/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="A concrete-panel piano keyboard with three players' keys lit in different colors and named live cursors"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Multiplayer Piano" />
+    <meta
+      name="twitter:description"
+      content="A real-time shared piano. Send someone the room link and play together from anywhere."
+    />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/og.png" />
+    <meta name="theme-color" content="#e3e3e1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

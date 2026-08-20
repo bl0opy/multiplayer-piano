@@ -1,6 +1,11 @@
 import { defineConfig } from "vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
+// Absolute origin baked into the Open Graph tags in index.html. The Worker
+// serves the client from its own origin, so that's the default here; the
+// GitHub Pages build overrides it in vite.config.pages.ts.
+process.env.VITE_SITE_URL ??= "https://multiplayer-piano.multiplayer-piano.workers.dev";
+
 export default defineConfig({
   // `root` is the client app, but wrangler.toml lives at the project root.
   // Without an explicit configPath the plugin looks for it under `root`,

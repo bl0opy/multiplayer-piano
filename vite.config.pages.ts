@@ -9,6 +9,11 @@ import { defineConfig } from "vite";
 //
 // BASE must match how Pages serves the site: "/<repo>/" for a project page
 // (the default), or "/" for a user page or custom domain.
+// Pages serves from <owner>.github.io/<repo>, so the Open Graph URLs need
+// that full base. The workflow passes it in; this default keeps a local
+// `npm run build:pages` honest.
+process.env.VITE_SITE_URL ??= "https://bl0opy.github.io/multiplayer-piano";
+
 export default defineConfig({
   root: "src/client",
   base: process.env.PAGES_BASE ?? "/multiplayer-piano/",

@@ -93,6 +93,19 @@ middle C keeps playback within 0.5x-2x, which is acceptable, but the top notes
 are still shorter and thinner than the bottom. Adding samples for C3/C5 and
 picking the nearest per note is the fix.
 
+## Link previews
+
+`src/client/public/og.png` (1200x630, generated from `images/UI.png`) plus
+Open Graph tags in `index.html`. The `og:image` and `og:url` are absolute —
+scrapers do not resolve relative paths — so `%VITE_SITE_URL%` is substituted
+at build time: `vite.config.ts` defaults it to the Worker origin,
+`vite.config.pages.ts` to the Pages URL, and the workflow derives it from the
+repo name. Regenerate the card with:
+
+```bash
+ffmpeg -i images/UI.png -vf "scale=1000:625:flags=lanczos,pad=1200:630:(ow-iw)/2:(oh-ih)/2:color=0xE3E3E1" src/client/public/og.png
+```
+
 ## Hosting
 
 Two deployment targets, and they are not equivalent:

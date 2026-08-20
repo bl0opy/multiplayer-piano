@@ -83,6 +83,27 @@ test("the room id is generated into the url when absent", async ({ context }) =>
   await expect(page.locator("#join-room")).toHaveText(room);
 });
 
+test("link previews have an absolute image that is actually served", async ({ context }) => {
+  const page = await openPage(context, roomUrl("og"));
+
+  const image = await page.getAttribute('meta[property="og:image"]', "content");
+  const url = await page.getAttribute('meta[property="og:url"]', "content");
+  const card = await page.getAttribute('meta[name="twitter:card"]', "content");
+
+  expect(card).toBe("summary_large_image");
+  // Scrapers do not resolve relative paths, so a non-absolute URL here means
+  // no thumbnail anywhere the link is pasted.
+  expect(image).toMatch(/^https?:\/\//);
+  expect(url).toMatch(/^https?:\/\//);
+
+  // The tag can be well-formed and still point at a 404. Fetch the file from
+  // the origin under test rather than the baked-in production one.
+  const local = new URL(image!).pathname;
+  const res = await page.request.get(local);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("image");
+});
+
 test("the keyboard is centred on middle C", async ({ context }) => {
   const page = await openPage(context, roomUrl("layout"));
 

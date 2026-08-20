@@ -41,6 +41,10 @@ jobs:
         env:
           VITE_WORKER_ORIGIN: ${{ vars.WORKER_ORIGIN }}
           PAGES_BASE: /${{ github.event.repository.name }}/
+          # Absolute origin for the Open Graph tags, derived from the repo so
+          # a rename doesn't silently leave link previews pointing at the old
+          # URL with a broken image.
+          VITE_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist/pages
