@@ -53,7 +53,7 @@ Player names are untrusted input on top of being sanitized server-side — set t
 
 Voices are keyed `` `${note}:${color}` `` so two players holding the same note are two independent oscillators and one `note_off` releases only the right one. Preserve that key shape if you touch voice handling.
 
-The keyboard is DOM divs, not canvas: 2 octaves from MIDI 60, white keys laid out in flow and black keys absolutely positioned by percentage off the white-key index. Both share `data-note`, and `highlightKey` sets `style.backgroundColor` directly — colors are inline, not CSS classes.
+The keyboard is DOM divs, not canvas: two octaves from MIDI 48 (C3 to B4), white keys laid out in flow and black keys absolutely positioned by percentage off the white-key index. The range is deliberately centred on middle C — the sample's native pitch — so keys resample between 0.5x and 2x rather than the 1x-4x a C4-upward layout forced; past ~2x the tone gets thin and short. The computer-keyboard row (`TYPING_START_NOTE`) starts at middle C independently of the on-screen range. Both share `data-note`, and `highlightKey` sets `style.backgroundColor` directly — colors are inline, not CSS classes.
 
 ## Tests
 
@@ -81,9 +81,10 @@ ffmpeg -ss 0.2140 -t 1.826 -i /tmp/full.wav -af "afade=t=out:st=1.676:d=0.15" -b
 Trim on the decoded WAV, not the mp3: `-ss` on a compressed stream snaps to a
 frame boundary and lands the attack tens of ms late.
 
-Known limitation: one sample covers all 24 keys, so the top of the range is
-audibly thin and short (an octave up plays at 2x rate, halving the duration).
-Adding samples for C5/C6 and picking the nearest per note is the fix.
+Known limitation: one sample covers the whole keyboard. Centring the range on
+middle C keeps playback within 0.5x-2x, which is acceptable, but the top notes
+are still shorter and thinner than the bottom. Adding samples for C3/C5 and
+picking the nearest per note is the fix.
 
 ## Hosting
 

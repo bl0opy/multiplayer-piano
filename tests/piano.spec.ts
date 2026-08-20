@@ -79,6 +79,25 @@ test("the room id is generated into the url when absent", async ({ context }) =>
   await expect(page.locator("#room-label")).toContainText("room:");
 });
 
+test("the keyboard is centred on middle C", async ({ context }) => {
+  const page = await openPage(context, roomUrl("layout"));
+
+  const notes = await page.$$eval(".key", (els) =>
+    els.map((e) => Number((e as HTMLElement).dataset.note)).sort((a, b) => a - b)
+  );
+  const whites = await page.$$eval(".key.white", (els) =>
+    els.map((e) => Number((e as HTMLElement).dataset.note))
+  );
+
+  expect(Math.min(...notes)).toBe(48); // C3
+  expect(Math.max(...notes)).toBe(71); // B4
+  expect(whites).toHaveLength(14);
+
+  // Middle C is the sample's native pitch, so it should sit in the centre of
+  // the range — not at an edge, where most keys would resample far from 1x.
+  expect(whites.indexOf(60)).toBe(7);
+});
+
 test("a note played by one client lights up on the other", async ({ browser }) => {
   // Two independent contexts = two separate browser profiles, which is
   // how a real second player connects.

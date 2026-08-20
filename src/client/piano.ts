@@ -1,9 +1,17 @@
 import { noteOn, noteOff, unlockAudio } from "./sampler";
 
-// A minimal MIDI-numbered piano: 2 octaves starting at C4 (MIDI 60).
-// Feel free to extend the range later.
-const START_NOTE = 60; // C4
+// Two octaves, C3 up to B4, which puts middle C (MIDI 60) in the middle of
+// the keyboard rather than at its bottom edge.
+//
+// This is also where the instrument sounds best: the sample was recorded at
+// middle C, so this range asks it for 0.5x-1.9x playback instead of the
+// 1x-4x a C4-upward layout needed. Anything much above 2x gets thin and
+// short, because resampling scales duration as well as pitch.
+const START_NOTE = 48; // C3
 const OCTAVES = 2;
+
+/** Where the computer-keyboard row starts — middle C, the sample's own pitch. */
+const TYPING_START_NOTE = 60;
 const WHITE_OFFSETS = [0, 2, 4, 5, 7, 9, 11]; // semitone offsets within an octave
 const BLACK_OFFSETS = [1, 3, null, 6, 8, 10, null]; // aligned to white key index, null = no black key after this white key
 
@@ -127,7 +135,7 @@ function paintKey(note: number) {
   });
 }
 
-// --- Computer keyboard mapping (A–L = one white-key octave) -------------
+// --- Computer keyboard mapping (A–L = one white-key octave from middle C) ---
 
 const KEY_TO_SEMITONE: Record<string, number> = {
   a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6,
@@ -141,12 +149,12 @@ export function bindComputerKeyboard(onNoteOn: NoteHandler, onNoteOff: NoteHandl
     const semitone = KEY_TO_SEMITONE[e.key.toLowerCase()];
     if (semitone === undefined || held.has(e.key)) return;
     held.add(e.key);
-    onNoteOn(START_NOTE + semitone);
+    onNoteOn(TYPING_START_NOTE + semitone);
   });
   window.addEventListener("keyup", (e) => {
     const semitone = KEY_TO_SEMITONE[e.key.toLowerCase()];
     if (semitone === undefined) return;
     held.delete(e.key);
-    onNoteOff(START_NOTE + semitone);
+    onNoteOff(TYPING_START_NOTE + semitone);
   });
 }
