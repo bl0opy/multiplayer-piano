@@ -10,9 +10,11 @@ compatibility_flags = ["nodejs_compat"]
 name = "PIANO_ROOMS"
 class_name = "PianoRoom"
 
+# new_sqlite_classes (not new_classes): SQLite-backed Durable Objects are
+# the current default and the only kind available on the Workers free plan.
 [[migrations]]
 tag = "v1"
-new_classes = ["PianoRoom"]
+new_sqlite_classes = ["PianoRoom"]
 
 # Serves the built client (dist/client) for any request that isn't
 # handled by the Worker's fetch() logic below — i.e. the actual site.
