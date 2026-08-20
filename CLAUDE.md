@@ -46,12 +46,19 @@ Protocol, client → server: `hello{name}`, `note_on`/`note_off{note,velocity}`,
 - `main.ts` — the name gate, the socket (exponential-backoff reconnect, 500ms → 8s), the room ID (`?room=` param, generated + `replaceState`d if absent), and the `peers` roster every other module reads from. **Nothing connects until the join form is submitted**: that submit is also the user gesture that unlocks the AudioContext, so don't move `connect()` earlier or the first note is silent.
 - `piano.ts` — DOM keyboard, key highlighting, computer-keyboard mapping. Audio is delegated to `sampler.ts`.
 - `sampler.ts` — sample playback. One recorded middle C (`audio/piano-c4.mp3`) pitch-shifted by `playbackRate` for every other key, so resampling shortens higher notes as well as raising them. Imported with `?url` so Vite rewrites the path for whatever base the site is served under — a plain `/audio/...` string would 404 under GitHub Pages' `/multiplayer-piano/` prefix.
+- `style.css` — the whole design system lives here as CSS variables on `:root` (industrial palette: concrete ground, chalk keys, rubber-gasket ink, one safety-orange accent). Geist + Geist Mono come from Google Fonts; `.eyebrow` is the small uppercase mono label used throughout.
 - `cursors.ts` — remote cursor rendering. Positions are viewport *fractions*, not pixels, so they map across screen sizes; sends are throttled to ~40ms and coalesced onto animation frames.
 - `config.ts` — resolves the WebSocket URL. Same-origin by default; `VITE_WORKER_ORIGIN` points it at a remote Worker for the GitHub Pages build.
 
 Player names are untrusted input on top of being sanitized server-side — set them with `textContent`, never `innerHTML` (see `createCursor`).
 
 Voices are keyed `` `${note}:${color}` `` so two players holding the same note are two independent oscillators and one `note_off` releases only the right one. Preserve that key shape if you touch voice handling.
+
+Sharps are positioned by **one CSS formula**, not by JS. `piano.ts` sets `--i` (the white-key index the sharp follows) and `--white-count` on the bed; `style.css` derives the seam as `(i+1)*(W+gap)/count - gap/2`. The flex `gap` is why a plain fraction of the bed is wrong — and the same formula resolves against the vertical axis on mobile, where the bed rotates. If you change `--key-gap`, both orientations stay correct automatically.
+
+**Mobile rotates the instrument** (`@media (max-width: 760px)`): two octaves across a phone gives ~25px keys, so the bed becomes a column and each key is a full-width bar. Same DOM, CSS only.
+
+`#status` is visually hidden (`.sr-only`) and exists as an `aria-live` region — the roster chips carry the same information visually. Tests still assert on its text, and Playwright's `toContainText` works on hidden elements.
 
 The keyboard is DOM divs, not canvas: two octaves from MIDI 48 (C3 to B4), white keys laid out in flow and black keys absolutely positioned by percentage off the white-key index. The range is deliberately centred on middle C — the sample's native pitch — so keys resample between 0.5x and 2x rather than the 1x-4x a C4-upward layout forced; past ~2x the tone gets thin and short. The computer-keyboard row (`TYPING_START_NOTE`) starts at middle C independently of the on-screen range. Both share `data-note`, and `highlightKey` sets `style.backgroundColor` directly — colors are inline, not CSS classes.
 

@@ -76,7 +76,11 @@ test("the room id is generated into the url when absent", async ({ context }) =>
   const page = await openPage(context, "/");
 
   await expect.poll(() => new URL(page.url()).searchParams.get("room")).not.toBeNull();
-  await expect(page.locator("#room-label")).toContainText("room:");
+  const room = new URL(page.url()).searchParams.get("room")!;
+  // The generated id is shown on the panel and on the join card, so a link
+  // shared from either place matches the socket that actually gets opened.
+  await expect(page.locator("#room-code")).toHaveText(room);
+  await expect(page.locator("#join-room")).toHaveText(room);
 });
 
 test("the keyboard is centred on middle C", async ({ context }) => {

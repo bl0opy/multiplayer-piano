@@ -80,8 +80,12 @@ export function renderKeyboard(
     bindPointerEvents(el, note, onNoteOn, onNoteOff);
   }
 
-  // Position black keys relative to the white keys they sit between.
-  const whiteWidthPct = 100 / totalWhite;
+  // Black keys sit on the seam after a given white key. Rather than compute a
+  // position here, hand the seam index to CSS as --i: the flex gap makes the
+  // seam land off a plain fraction of the bed, and the correction differs per
+  // orientation (the bed rotates on mobile). One formula in style.css owns it.
+  container.style.setProperty("--white-count", String(totalWhite));
+
   for (let i = 0; i < totalWhite; i++) {
     const octave = Math.floor(i / WHITE_OFFSETS.length);
     const offsetIndex = i % WHITE_OFFSETS.length;
@@ -92,7 +96,7 @@ export function renderKeyboard(
     const el = document.createElement("div");
     el.className = "key black";
     el.dataset.note = String(note);
-    el.style.left = `calc(${(i + 1) * whiteWidthPct}% - 3%)`;
+    el.style.setProperty("--i", String(i));
     container.appendChild(el);
 
     bindPointerEvents(el, note, onNoteOn, onNoteOff);

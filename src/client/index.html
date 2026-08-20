@@ -2,45 +2,96 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Multiplayer Piano — edge-native jam room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <form id="join" autocomplete="off">
-      <div class="join-card">
-        <h2>what should we call you?</h2>
-        <input
-          id="name-input"
-          name="name"
-          type="text"
-          maxlength="24"
-          placeholder="your name"
-          aria-label="your name"
-        />
-        <button type="submit">join room</button>
-        <p class="join-hint">everyone here sees your cursor and your notes</p>
+    <div id="app">
+      <header class="top-bar">
+        <div class="brand">
+          <span class="eyebrow">Multiplayer</span>
+          <h1>Piano</h1>
+        </div>
+        <div class="live-chip">
+          <span class="dot"></span>
+          <span class="eyebrow">Live</span>
+        </div>
+      </header>
+
+      <div class="presence-row">
+        <div id="players" class="players"></div>
+        <div class="room-meta">
+          <span class="eyebrow">Room</span>
+          <span id="room-code" class="room-code"></span>
+        </div>
       </div>
-    </form>
 
-    <header>
-      <h1>multiplayer piano</h1>
-      <p id="status">connecting…</p>
-      <p id="room-label"></p>
-    </header>
+      <div class="chassis">
+        <div class="rail">
+          <span class="eyebrow">C3 — B4</span>
+          <span class="eyebrow">Grand Piano</span>
+        </div>
+        <div id="keyboard" class="key-bed"></div>
+      </div>
 
-    <main>
-      <div id="keyboard"></div>
-    </main>
+      <footer class="footer">
+        <div class="typing-hint">
+          <span class="eyebrow">Play with your keyboard</span>
+          <div class="keycaps">
+            <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd>
+            <kbd>G</kbd><kbd>H</kbd><kbd>J</kbd><kbd>K</kbd>
+          </div>
+        </div>
+        <button id="copy-link" class="share" type="button">Copy room link</button>
+      </footer>
+    </div>
 
-    <footer>
-      <p>
-        Press keys with your mouse/touch, or your computer keyboard (A–L = white keys).
-        Everyone with this room's link hears and sees it live.
-      </p>
-    </footer>
+    <!-- Visually hidden: the roster chips carry this for sighted users. -->
+    <p id="status" class="sr-only" role="status" aria-live="polite">connecting…</p>
 
     <div id="cursor-layer" aria-hidden="true"></div>
+
+    <form id="join" autocomplete="off">
+      <div class="join-card">
+        <div class="card-rail">
+          <span class="eyebrow">Room <span id="join-room"></span></span>
+          <span class="card-rail-right">
+            <span class="dot"></span>
+            <span id="join-count" class="eyebrow">Joining</span>
+          </span>
+        </div>
+        <div class="join-panel">
+          <div class="join-heading">
+            <h2>What should<br />we call you?</h2>
+            <p>Everyone in the room sees your name follow your cursor.</p>
+          </div>
+          <div class="field">
+            <span class="dot"></span>
+            <input
+              id="name-input"
+              name="name"
+              type="text"
+              maxlength="24"
+              placeholder="your name"
+              aria-label="your name"
+            />
+          </div>
+          <button type="submit">Join room</button>
+        </div>
+      </div>
+      <div class="join-brand">
+        <span class="eyebrow">Multiplayer</span>
+        <div class="join-wordmark">Piano</div>
+      </div>
+      <div class="join-footnote eyebrow">Runs on Cloudflare Durable Objects</div>
+    </form>
 
     <script type="module" src="./main.ts"></script>
   </body>

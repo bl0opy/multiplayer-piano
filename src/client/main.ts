@@ -18,11 +18,15 @@ import {
 import { roomSocketUrl } from "./config";
 
 const statusEl = document.getElementById("status")!;
-const roomLabelEl = document.getElementById("room-label")!;
+const playersEl = document.getElementById("players")!;
+const roomCodeEl = document.getElementById("room-code")!;
+const joinRoomEl = document.getElementById("join-room")!;
+const joinCountEl = document.getElementById("join-count")!;
 const keyboardEl = document.getElementById("keyboard")!;
 const cursorLayerEl = document.getElementById("cursor-layer")!;
 const joinEl = document.getElementById("join")! as HTMLFormElement;
 const nameInputEl = document.getElementById("name-input")! as HTMLInputElement;
+const copyLinkEl = document.getElementById("copy-link")! as HTMLButtonElement;
 
 // Room id comes from ?room=whatever, or a random one is generated and
 // pushed into the URL so sharing the link puts everyone in the same room.
@@ -34,26 +38,61 @@ if (!roomId) {
   url.searchParams.set("room", roomId);
   history.replaceState(null, "", url.toString());
 }
-roomLabelEl.textContent = `room: ${roomId} — share this page's link to jam together`;
+roomCodeEl.textContent = roomId;
+joinRoomEl.textContent = roomId;
 
 const NAME_KEY = "mpp:name";
 
 let myName = "";
 let myId = "";
-let myColor = "#ffffff";
+let myColor = "#ff5a1f";
 let socket: WebSocket | null = null;
 let reconnectDelay = 500;
 
 /** Everyone else in the room, by id. Cursors and notes look up color/name here. */
 const peers = new Map<string, Peer>();
 
-function setStatus(text: string) {
-  statusEl.textContent = text;
-}
-
+/**
+ * #status is visually hidden — the roster chips carry this for sighted users —
+ * but it stays in the DOM as a live region so screen readers hear people
+ * joining and leaving.
+ */
 function describeRoom() {
   const n = peers.size + 1;
-  setStatus(`${n} player${n === 1 ? "" : "s"} here — you are ${myName}`);
+  statusEl.textContent = `${n} player${n === 1 ? "" : "s"} here — you are ${myName}`;
+  renderPlayers();
+}
+
+function renderPlayers() {
+  playersEl.replaceChildren();
+  const everyone: (Peer & { self?: boolean })[] = [
+    { id: myId, color: myColor, name: myName, self: true },
+    ...peers.values(),
+  ];
+
+  for (const p of everyone) {
+    const chip = document.createElement("div");
+    chip.className = p.self ? "player is-self" : "player";
+
+    const swatch = document.createElement("span");
+    swatch.className = "swatch";
+    swatch.style.backgroundColor = p.color;
+
+    const name = document.createElement("span");
+    // textContent, not innerHTML — a player's name is untrusted input.
+    name.textContent = p.name;
+
+    chip.appendChild(swatch);
+    chip.appendChild(name);
+
+    if (p.self) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "YOU";
+      chip.appendChild(tag);
+    }
+    playersEl.appendChild(chip);
+  }
 }
 
 // --- name gate ----------------------------------------------------------
@@ -71,7 +110,6 @@ joinEl.addEventListener("submit", (e) => {
   unlockAudio();
 
   joinEl.hidden = true;
-  document.body.classList.add("joined");
   connect();
 });
 
@@ -147,9 +185,10 @@ function connect() {
 }
 
 function scheduleReconnect() {
-  setStatus("reconnecting…");
+  statusEl.textContent = "reconnecting…";
   peers.clear();
   clearCursors();
+  renderPlayers();
   setTimeout(connect, reconnectDelay);
   reconnectDelay = Math.min(reconnectDelay * 2, 8000);
 }
@@ -158,6 +197,25 @@ function send(msg: unknown) {
   if (socket?.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify(msg));
 }
+
+// --- share --------------------------------------------------------------
+
+copyLinkEl.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(location.href);
+    copyLinkEl.textContent = "Link copied";
+    copyLinkEl.classList.add("copied");
+    setTimeout(() => {
+      copyLinkEl.textContent = "Copy room link";
+      copyLinkEl.classList.remove("copied");
+    }, 1600);
+  } catch {
+    // Clipboard can be blocked (insecure origin, denied permission). Say so
+    // rather than silently doing nothing.
+    copyLinkEl.textContent = "Copy failed";
+    setTimeout(() => (copyLinkEl.textContent = "Copy room link"), 1600);
+  }
+});
 
 // --- local input --------------------------------------------------------
 
@@ -177,4 +235,5 @@ bindComputerKeyboard(handleNoteOn, handleNoteOff);
 initCursorLayer(cursorLayerEl);
 trackLocalCursor((x, y) => send({ type: "cursor", x, y }));
 
+joinCountEl.textContent = "Joining";
 nameInputEl.focus();
