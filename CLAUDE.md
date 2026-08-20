@@ -44,7 +44,8 @@ Protocol, client → server: `hello{name}`, `note_on`/`note_off{note,velocity}`,
 **`src/client/`** — vanilla TS, no framework.
 
 - `main.ts` — the name gate, the socket (exponential-backoff reconnect, 500ms → 8s), the room ID (`?room=` param, generated + `replaceState`d if absent), and the `peers` roster every other module reads from. **Nothing connects until the join form is submitted**: that submit is also the user gesture that unlocks the AudioContext, so don't move `connect()` earlier or the first note is silent.
-- `piano.ts` — Web Audio synth, DOM keyboard, computer-keyboard mapping.
+- `piano.ts` — DOM keyboard, key highlighting, computer-keyboard mapping. Audio is delegated to `sampler.ts`.
+- `sampler.ts` — sample playback. One recorded middle C (`audio/piano-c4.mp3`) pitch-shifted by `playbackRate` for every other key, so resampling shortens higher notes as well as raising them. Imported with `?url` so Vite rewrites the path for whatever base the site is served under — a plain `/audio/...` string would 404 under GitHub Pages' `/multiplayer-piano/` prefix.
 - `cursors.ts` — remote cursor rendering. Positions are viewport *fractions*, not pixels, so they map across screen sizes; sends are throttled to ~40ms and coalesced onto animation frames.
 - `config.ts` — resolves the WebSocket URL. Same-origin by default; `VITE_WORKER_ORIGIN` points it at a remote Worker for the GitHub Pages build.
 
@@ -64,6 +65,25 @@ never share a Durable Object with stale players in it.
 Assert on the player count rather than the string "connected" when more than one client
 is involved: `player_joined` overwrites the status line, so "connected" is only briefly
 on screen and asserting on it is racy.
+
+## The piano sample
+
+`src/client/audio/piano-c4.mp3` is derived from `sound/middle-c.mp3` (the 42s
+original, kept as the source). Only the first ~1.8s of that file is a piano
+note — after ~2.05s a sustained pad fades in and cycles every ~6s — and the
+note itself doesn't start until 0.214s. Regenerate with:
+
+```bash
+ffmpeg -i sound/middle-c.mp3 -ac 1 -ar 44100 /tmp/full.wav
+ffmpeg -ss 0.2140 -t 1.826 -i /tmp/full.wav -af "afade=t=out:st=1.676:d=0.15" -b:a 96k src/client/audio/piano-c4.mp3
+```
+
+Trim on the decoded WAV, not the mp3: `-ss` on a compressed stream snaps to a
+frame boundary and lands the attack tens of ms late.
+
+Known limitation: one sample covers all 24 keys, so the top of the range is
+audibly thin and short (an octave up plays at 2x rate, halving the duration).
+Adding samples for C5/C6 and picking the nearest per note is the fix.
 
 ## Hosting
 

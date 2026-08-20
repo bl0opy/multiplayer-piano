@@ -16,9 +16,9 @@ and you'll hear/see each other's notes land in real time.
 - **Cloudflare Vite plugin** — `vite dev` runs the Worker code inside real
   `workerd`, so local dev behaves like production instead of a Node.js
   approximation of it.
-- **Web Audio API** — client-side synth (`src/client/piano.ts`), one
-  oscillator+gain voice per sounding note, keyed by player so two people
-  holding the same key are two independent voices.
+- **Web Audio API** — a real recorded piano note (`src/client/sampler.ts`)
+  pitch-shifted per key, one voice per sounding note keyed by player so two
+  people holding the same key are two independent voices.
 - **Live cursors** — pointer positions travel as viewport fractions
   (`src/client/cursors.ts`), throttled to ~25/sec and coalesced onto
   animation frames, so they land sensibly across different screen sizes.

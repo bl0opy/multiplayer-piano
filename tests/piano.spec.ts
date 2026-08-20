@@ -44,6 +44,34 @@ test("no socket is opened until a name is submitted", async ({ context }) => {
   await expect(page.locator("#status")).toContainText("you are ada");
 });
 
+test("the piano sample is served and decodes", async ({ context }) => {
+  const page = await context.newPage();
+  const audio: { url: string; status: number }[] = [];
+  page.on("response", (r) => {
+    // Match on content-type, not the path: in dev, Vite serves a `?url`
+    // import as a JavaScript module whose URL still ends in .mp3.
+    const type = r.headers()["content-type"] ?? "";
+    if (type.startsWith("audio/")) audio.push({ url: r.url(), status: r.status() });
+  });
+
+  await page.goto(roomUrl("sample"));
+  await join(page, "ada");
+
+  // Runs in both dev and preview, so a base-path or asset-output regression
+  // (the mp3 404ing under GitHub Pages' /multiplayer-piano/ prefix) fails here.
+  await expect.poll(() => audio.length).toBeGreaterThan(0);
+  expect(audio[0].status).toBe(200);
+
+  // Decoding is what actually proves the bytes are usable audio.
+  const seconds = await page.evaluate(async (url) => {
+    const ctx = new AudioContext();
+    const buf = await ctx.decodeAudioData(await (await fetch(url)).arrayBuffer());
+    return buf.duration;
+  }, audio[0].url);
+  expect(seconds).toBeGreaterThan(1);
+  expect(seconds).toBeLessThan(3);
+});
+
 test("the room id is generated into the url when absent", async ({ context }) => {
   const page = await openPage(context, "/");
 
