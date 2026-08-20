@@ -1,5 +1,7 @@
 # multiplayer piano
 
+![Multiplayer Piano — a concrete-panel keyboard with three players' colored keys and named live cursors](images/UI.png)
+
 A browser-based piano that multiple people can play together in real time,
 built on Cloudflare's edge stack. Open the same room link on two devices
 and you'll hear/see each other's notes land in real time.
